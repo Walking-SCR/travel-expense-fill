@@ -33,6 +33,7 @@ validator:
 | `scripts/adjust_trip.py` | 出差区间中断返程检测与拆分 |
 | `scripts/fill_trip_xlsx.py` | 差旅费 Excel 填写 |
 | `scripts/fill_base_xlsx.py` | Base地交通费 Excel 填写 |
+| `scripts/render_form_summary.py` | 网页报销必填字段 Markdown 清单 |
 | `scripts/gen_trip_reports.py` | CLI 一键生成入口 |
 
 ## 补贴规则速查
@@ -67,6 +68,7 @@ validator:
 3. 确认 `personal_info.json` 包含 `name, emp_id, manager, base_city`
 4. 确认 `last_trip.json` 包含 `project_code, project_name, project_status, project_manager`
    > 项目信息可填 `"无"`，不影响报销单生成。
+5. 确认 `reimbursement_form.json` 包含网页报销固定必填项：所属部门、标题、报销主体、币种、原借款、业务编号。
 
 ### Step 1 预收集信息
 
@@ -77,7 +79,7 @@ validator:
 - 加班日期：仅当出差区间包含周六/日时才需要确认；周末有加班按 100% 补贴，格式用 `YYYY-MM-DD,YYYY-MM-DD`。
 - 图片票据或解析失败票据的日期和金额。
 
-### Step 2 生成报销表
+### Step 2 生成报销表和网页填写清单
 
 CLI 参数优先，适合代理非交互执行：
 
@@ -96,6 +98,12 @@ python3 scripts/gen_trip_reports.py \
 ```bash
 --bus "2025-12-24,45.00" --train "2025-12-24,74.50"
 ```
+
+生成完成后会同时输出：
+
+- 差旅费 Excel
+- Base地交通费 Excel（无 Base 地数据时跳过）
+- `报销网页填写清单.md`：只包含网页截图中带 `*` 的必填字段，附件只列生成的 Excel 文件。
 
 ### Step 3 手动流程（需要逐步确认时）
 
@@ -125,6 +133,9 @@ python3 scripts/gen_trip_reports.py \
 7. 填写 Excel  
 `fill_trip_xlsx.fill_trip_xlsx(...)` 生成差旅费表；仅当 `base_amounts` 有数据时调用 `fill_base_xlsx.fill_base_xlsx(...)`。
 
+8. 生成网页报销填写清单  
+调用 `render_form_summary.render_form_summary(...)` 生成 `报销网页填写清单.md`；金额口径为差旅费总额 + Base地交通费总额，不从 Excel 公式反读。
+
 ## 验证检查项
 
 ### 差旅费
@@ -140,6 +151,12 @@ python3 scripts/gen_trip_reports.py \
 - [ ] 确认目标 sheet 和模板行列没有错位
 - [ ] 合并格按脚本当前策略处理，写值只写左上角锚点
 
+### 网页填写清单
+- [ ] `报销网页填写清单.md` 已生成
+- [ ] 只包含带 `*` 的必填字段：所属部门、标题、报销主体、报销日期、摘要、报销合计、币种、原借款、应付余额、业务编号、附件
+- [ ] 报销合计 = 差旅费总额 + Base地交通费总额；原借款默认 0；应付余额等于报销合计
+- [ ] 附件只列生成的 Excel 文件
+
 ## 注意事项
 
 1. **打车解析**：优先用滴滴 Y 坐标分组法，失败降级通用解析器；通行费按时间自动匹配
@@ -154,3 +171,6 @@ python3 scripts/gen_trip_reports.py \
 | 文件 | 内容 |
 |------|------|
 | `references/column-mappings.md` | 差旅费/Base地模板列映射 |
+| `references/iteration-log.md` | v1迭代记录、删除的无效代码、流程变更 |
+| `references/benchmark-iteration-1.md` | v1方向A评测方法 + Iteration 1实测结果 |
+| `references/bugfix_list.md` | v3已知bug修复记录 |

@@ -31,3 +31,12 @@ __pycache__/
 *.swp
 *.swo
 outputs/
+
+# Node 依赖（非本项目；可能是符号链接指向运行时缓存）
+node_modules
+
+# 临时/工作目录（非本项目核心）
+work/
+
+# 网页报销必填项配置（每人不同，含真实公司信息）
+reimbursement_form.json

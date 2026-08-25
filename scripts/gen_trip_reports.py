@@ -38,10 +38,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import parse_trip, parse_ticket, parse_didi, calc_subsidy, fill_trip_xlsx, fill_base_xlsx, adjust_trip
 from parse_didi import parse_all_rides, classify_didi
+from render_form_summary import DEFAULT_FORM_CONFIG, render_form_summary
 
 SKILL_DIR = Path(__file__).parent.parent
 CONFIG_PATH = SKILL_DIR / 'config.json'
 PERSONAL_INFO = SKILL_DIR / 'personal_info.json'
+REIMBURSEMENT_FORM = SKILL_DIR / 'reimbursement_form.json'
 
 MONTH_NAMES = ['', '1月', '2月', '3月', '4月', '5月', '6月',
                '7月', '8月', '9月', '10月', '11月', '12月']
@@ -153,6 +155,16 @@ def _load_config():
     return config
 
 
+def _load_form_config():
+    """Load reimbursement_form.json, merge with defaults for missing keys."""
+    config = dict(DEFAULT_FORM_CONFIG)
+    if REIMBURSEMENT_FORM.exists():
+        with open(REIMBURSEMENT_FORM) as f:
+            existing = json.load(f)
+        config.update(existing)
+    return config
+
+
 def init(interactive=True):
     """Skill initialization: ensure config, check dependencies, detect MCP.
 
@@ -235,7 +247,7 @@ def generate(work_dir, year=None, month=None, pi=None, base_city=None,
         standard: 1=公司订酒店，2=自行解决住宿；None 时交互询问或默认 2
 
     Returns:
-        dict{out_trip, out_base, trips, trips_data} 或 None（失败时）
+        dict{out_trip, out_base, form_markdown, form_data, trips, trips_data} 或 None（失败时）
     """
     work_dir = Path(work_dir)
     if not work_dir.exists():
@@ -481,9 +493,26 @@ def generate(work_dir, year=None, month=None, pi=None, base_city=None,
         print(f'  {out_trip}')
         print(f'  ℹ️ 无Base地滴滴行程，跳过生成Base地交通费表格')
 
+    form_markdown_path = work_dir / '报销网页填写清单.md'
+    form_markdown, form_data = render_form_summary(
+        form_config=_load_form_config(),
+        year=year,
+        month=month,
+        out_trip=str(out_trip),
+        out_base=out_base_str,
+        days_data=trips_data,
+        train_fares=train_fares,
+        didi_trip=didi_trip_data,
+        base_amounts=base_amounts,
+    )
+    form_markdown_path.write_text(form_markdown, encoding='utf-8')
+    print(f'  {form_markdown_path}')
+
     return {
         'out_trip': str(out_trip),
         'out_base': out_base_str,
+        'form_markdown': str(form_markdown_path),
+        'form_data': form_data,
         'trips': trips,
         'trips_data': trips_data,
     }
